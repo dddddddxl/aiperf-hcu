@@ -9,6 +9,8 @@
 
 首版软件与干净安装验收见 [验证结果](docs/VALIDATION-RESULTS.md)，机器可读示例见 [模拟摘要](docs/mock-example.json)。示例不代表硬件性能。
 
+2026-11-17 已完成 Qwen3-4B/BW1100 单卡的原定矩阵、EvalScope 与 CPU 配额对照：3,072 个正式请求均通过计数和长度检查。详见 [实机验证报告](docs/HCU-VALIDATION-20261117.md) 与 [已验证启动配置](docs/SGLANG-QWEN3-BW1100.md)。**遥测缺失、细小延迟偏移未完全归因，尚未通过完整性能测量验收。**
+
 ## 安装
 
 需要 Python 3.11、Git 和 uv 0.13.8。客户端环境与 SGLang/vLLM 服务环境分开；不需要客户端安装 HCU 驱动或模型权重。
@@ -70,5 +72,5 @@ uv build
 测试包含固定 AIPerf 的真实子进程，仅连接 loopback 模拟服务；不会执行目标模型。Linux CPU CI 不使用 self-hosted runner，不运行定期 HCU 压测。
 干净安装使用 `uv.lock` 导出的上游依赖后再安装 wheel，CLI 会拒绝缺少固定源码身份的 AIPerf 安装。
 
-首版还未完成真实 Qwen3-4B/SGLang/HCU 验证、EvalScope 实机交叉对照及遥测/客户端干扰试验。没有“已经验证”的 vLLM 或服务启动承诺；资源由用户后续提供。
+单卡基础验证范围仅限上述模型和镜像。EvalScope 的请求一致性检查已通过；CPU 对照没有发现明显吞吐提升，但仍有待归因的延迟偏移。真实 exporter 遥测及其开关干扰对照尚未完成；vLLM 和其他组合没有实测承诺。
 后续公开或迁入 HYGON-AI 需再次检查私有路径、凭据、数据集与依赖许可，见 [第三方声明](THIRD_PARTY_NOTICES.md)。
