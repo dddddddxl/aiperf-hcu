@@ -61,7 +61,7 @@ def load(path):
     if c["schema_version"] != 1:
         raise ConfigError("不支持的 schema_version")
     s = c["service"]
-    keys(s, ("url", "model", "tokenizer", "api_key_env", "streaming"), ("url", "model", "tokenizer"))
+    keys(s, ("url", "model", "tokenizer", "api_key_env", "streaming", "token_count_source"), ("url", "model", "tokenizer"))
     s["url"] = url(s["url"])
     if urlsplit(s["url"]).path not in ("", "/"):
         raise ConfigError("service.url 使用服务根地址，不包含 /v1")
@@ -71,6 +71,9 @@ def load(path):
         raise ConfigError("tokenizer 必须为本地路径")
     s["tokenizer"] = str((path.parent / s["tokenizer"]).resolve())
     s.setdefault("streaming", True)
+    s.setdefault("token_count_source", "client")
+    if s["token_count_source"] not in ("client", "server"):
+        raise ConfigError("token_count_source 必须为 client 或 server")
     if not isinstance(s["streaming"], bool):
         raise ConfigError("streaming 必须是布尔值")
     if s.get("api_key_env") and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", s["api_key_env"]):

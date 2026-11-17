@@ -50,6 +50,8 @@ uv run --no-sync aiperf-hcu compare --baseline artifacts/first --candidate artif
 TTFT 与 TTFO 分列；非流式不补造首 token/逐 token 时间。保留上游分位数，不把多轮 p99 做平均后冒充整体 p99。
 上下文长度目标与 chat 模板后的实际输入长度可能不同，输出以原始测量为准。
 
+`service.token_count_source` 默认 `client`（兼容原版行为）；可显式设为 `server`，转发上游原生 `--use-server-token-count`，采用服务端 usage 计算长度/吞吐。缺少 usage 不回退或填零。报告同时列出 usage 指标；计数口径纳入比较身份。Qwen3 推理输出的返回文本分词可能与服务端生成 token 数不同，不能把其中一种口径重命名成另一种。
+
 ## 海光遥测
 
 固定参考 exporter `30cfbc1`：`hcu_power_usage`（W）、`hcu_temp`（C）、`hcu_usedmemory_bytes`（bytes）、`hcu_utilizationrate`（瞬时 CU %）。只按明确的 node + PCI BDF 物理卡映射采集；不支持 vHCU。

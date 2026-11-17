@@ -74,3 +74,23 @@ def test_real_stream_disconnect_is_not_complete(tmp_path):
         result = run(c, tmp_path / "disconnect")
         assert state["requests"]
         assert result["status"] == "incomplete"
+
+
+@pytest.mark.upstream
+@pytest.mark.parametrize("source,mode,expected", [
+    ("server", "usage_difference", "completed"),
+    ("client", "usage_difference", "incomplete"),
+    ("server", "missing_usage", "incomplete"),
+])
+def test_explicit_usage_basis(tmp_path, source, mode, expected):
+    with server(mode=mode) as (url, state):
+        c = config(tmp_path, url)
+        c["service"]["token_count_source"] = source
+        c["workload"]["requests"] = 1
+        result = run(c, tmp_path / "basis")
+        assert result["status"] == expected, result
+        upstream = result["runs"][0]["upstream"]
+        assert upstream["token_count_source"] == source
+        if mode == "usage_difference":
+            assert upstream["metrics"]["output_sequence_length"]["avg"] == (8 if source == "server" else 7)
+            assert upstream["metrics"]["usage_completion_tokens"]["avg"] == 8

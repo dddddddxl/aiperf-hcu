@@ -61,6 +61,7 @@ def server(mode="ok", key=None):
                 return
             n = request.get("max_completion_tokens", request.get("max_tokens", 8))
             usage = {"prompt_tokens": 8, "completion_tokens": n, "total_tokens": 8+n}
+            output_n = n - 1 if state["mode"] == "usage_difference" else n
             if not request.get("stream"):
                 self.send({"id": "synthetic", "model": "mock-model", "object": "chat.completion", "choices": [{"index": 0, "message": {"role": "assistant", "content": "word "*n}, "finish_reason": "length"}], "usage": usage})
                 return
@@ -69,7 +70,7 @@ def server(mode="ok", key=None):
             self.send_header("Connection", "close")
             self.end_headers()
             try:
-                for i in range(n):
+                for i in range(output_n):
                     chunk = {"id": "synthetic", "model": "mock-model", "object": "chat.completion.chunk",
                              "choices": [{"index": 0, "delta": {"content": "word "}, "finish_reason": None}]}
                     self.wfile.write(("data: " + json.dumps(chunk) + "\n\n").encode())
@@ -78,7 +79,10 @@ def server(mode="ok", key=None):
                         self.close_connection = True
                         return
                     time.sleep(.005)
-                self.wfile.write(("data: " + json.dumps({"choices": [{"index": 0, "delta": {}, "finish_reason": "length"}], "usage": usage}) + "\n\ndata: [DONE]\n\n").encode())
+                final = {"choices": [{"index": 0, "delta": {}, "finish_reason": "length"}]}
+                if state["mode"] != "missing_usage":
+                    final["usage"] = usage
+                self.wfile.write(("data: " + json.dumps(final) + "\n\ndata: [DONE]\n\n").encode())
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):
                 pass

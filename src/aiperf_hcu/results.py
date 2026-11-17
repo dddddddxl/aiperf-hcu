@@ -13,8 +13,10 @@ METRICS = {
     "request_latency": "完整响应耗时",
     "output_token_throughput": "输出 token 吞吐",
     "request_throughput": "请求吞吐",
-    "input_sequence_length": "实际输入长度",
-    "output_sequence_length": "实际输出长度",
+    "input_sequence_length": "输入长度（所选计数口径）",
+    "output_sequence_length": "输出长度（所选计数口径）",
+    "usage_prompt_tokens": "服务端 usage 输入长度",
+    "usage_completion_tokens": "服务端 usage 输出长度",
     "request_count": "成功请求数",
     "error_request_count": "失败请求数",
 }
@@ -44,6 +46,7 @@ def read_upstream(directory, expected_requests, expected_output=None):
         length = metrics.get("output_sequence_length", {})
         length_ok = expected_output is None or length.get("min") == expected_output == length.get("max")
         return {"status": "complete" if complete and count_ok and length_ok else "incomplete", "metrics": metrics,
+                "token_count_source": "server" if data.get("input_config", {}).get("endpoint", {}).get("use_server_token_count") else "client",
                 "upstream_complete": complete, "count_verified": count_ok,
                 "zero_errors_inferred_from_complete_count": zero_inferred, "output_length_verified": length_ok if expected_output else None,
                 "reason": None if complete and count_ok and length_ok else "upstream_incomplete_or_count_or_length_unverified",
@@ -64,6 +67,7 @@ def markdown(summary):
             m = r["upstream"]["metrics"].get(key, {})
             vals = [m.get(k) for k in ("unit", "avg", "p50", "p95", "p99")]
             lines.append("| " + " | ".join([label] + [str(v) if v is not None else "未测量" for v in vals]) + " |")
+        lines.extend(["", f"Token 计数口径：{r['upstream'].get('token_count_source', 'unknown')}；client 为返回文本分词/原始提示词，server 为服务端 usage。两者可能因 chat 模板、特殊 token、推理解析而不同，不混用吞吐口径。"])
         lines.extend(["", f"遥测：{r['telemetry']['observed']} 个有效观测，{r['telemetry']['problems']} 个异常/缺失；新鲜度未知 {r['telemetry']['freshness_unknown']}。", ""])
         lines.extend(["| 设备（node / PCI） | 指标 | 单位 | 最小 | 平均 | 最大 |", "|---|---|---|---|---|---|"])
         for stat in r["telemetry"].get("statistics", []):

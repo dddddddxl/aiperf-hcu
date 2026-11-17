@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aiperf-hcu"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "海光推理服务的独立 AIPerf 适配与旁路遥测"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

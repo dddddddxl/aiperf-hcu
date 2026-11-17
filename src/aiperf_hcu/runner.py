@@ -63,6 +63,8 @@ def command(c, output):
             "--no-gpu-telemetry", "--no-server-metrics", "--ui", "none", "--export-level", "records"]
     if s["streaming"]:
         args.append("--streaming")
+    if s.get("token_count_source", "client") == "server":
+        args.append("--use-server-token-count")
     if w["warmup"]:
         args += ["--warmup-request-count", str(w["warmup"])]
     if w.get("request_rate"):

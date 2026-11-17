@@ -145,6 +145,18 @@ def test_nonstreaming_command(tmp_path):
     assert "--warmup-request-count" not in command(c, tmp_path / "raw")
 
 
+def test_server_token_count_explicit(tmp_path):
+    c = config(tmp_path, "http://localhost:1")
+    assert "--use-server-token-count" not in command(c, tmp_path / "raw")
+    c["service"]["token_count_source"] = "server"
+    assert "--use-server-token-count" in command(c, tmp_path / "raw")
+    c["service"]["token_count_source"] = "guessed"
+    p = tmp_path / "bad.yaml"
+    p.write_text(yaml.safe_dump(c))
+    with pytest.raises(ConfigError):
+        load(p)
+
+
 def test_upstream_missing_or_wrong_count(tmp_path):
     assert read_upstream(tmp_path, 3)["status"] == "incomplete"
 
