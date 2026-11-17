@@ -1,0 +1,41 @@
+# 复制为 *.local.yaml；填写实际地址和已核对的物理设备映射，不提交私有路径。
+schema_version: 1
+service:
+  url: http://127.0.0.1:30000
+  model: Qwen3-4B
+  tokenizer: /models/Qwen3-4B
+  streaming: true
+  # api_key_env: MODEL_API_KEY
+workload:
+  requests: 10
+  warmup: 0
+  repeats: 1
+  input_tokens: 128
+  input_stddev: 0
+  output_tokens: 128
+  concurrency: 1
+  seed: 42
+  timeout_s: 600
+  force_output_length: true
+telemetry:
+  enabled: true
+  url: http://127.0.0.1:16080/metrics
+  interval_s: 1
+  max_age_s: 5
+  devices:
+    - node: REPLACE_WITH_EXPORTER_NODE_LABEL
+      pcieBus_number: REPLACE_WITH_PHYSICAL_PCI_BDF
+      service_device: "0"
+environment:
+  model_revision: unknown
+  engine: sglang-das
+  engine_commit: unknown
+  image: unknown
+  dtk: unknown
+  driver: unknown
+  card_model: unknown
+  card_count: 1
+  quantization: BF16
+  parallelism: TP1
+  cache_policy: unknown
+  source: user_declared

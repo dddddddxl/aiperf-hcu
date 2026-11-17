@@ -1,0 +1,30 @@
+name: CPU validation
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.13.8'
+          python-version: '3.11'
+          enable-cache: false
+      - run: uv sync --locked --no-editable
+      - name: CPU mock and regression tests (no remote network)
+        run: uv run --no-sync pytest -q --junitxml=artifacts/tests.xml
+      - run: uv build
+      - name: Fresh wheel installation
+        run: |
+          uv venv .clean --python 3.11
+          uv export --locked --no-dev --no-emit-project --format requirements-txt > artifacts/dependencies.txt
+          uv pip sync --python .clean/bin/python artifacts/dependencies.txt
+          uv pip install --python .clean/bin/python --no-deps dist/*.whl
+          .clean/bin/python -c "from aiperf_hcu.runner import engine_identity; print(engine_identity())"
+          .clean/bin/aiperf-hcu --help

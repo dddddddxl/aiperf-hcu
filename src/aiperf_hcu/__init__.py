@@ -1,0 +1,5 @@
+"""HCU adaptation. No changes to upstream measurement algorithms."""
+__version__ = "0.1.0a1"
+AIPERF_VERSION = "0.13.0"
+AIPERF_COMMIT = "794f8bb75f8582f22e412d7e650fc71ca2a3d21a"
+EXPORTER_COMMIT = "30cfbc1031957737731725ceddb663bc508d7c96"
