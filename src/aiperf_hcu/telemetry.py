@@ -54,6 +54,7 @@ class Collector:
         self.config, self.path = config, path
         self.stop_event = threading.Event()
         self.thread = None
+        self.error_type = None
 
     def sample(self):
         try:
@@ -63,6 +64,12 @@ class Collector:
             return [{"collected_at": time.time(), "status": "collection_failed", "error_type": type(e).__name__}]
 
     def _work(self):
+        try:
+            self._collect()
+        except Exception as e:
+            self.error_type = type(e).__name__
+
+    def _collect(self):
         with self.path.open("a", encoding="utf-8") as f:
             while not self.stop_event.is_set():
                 started = time.monotonic()
@@ -83,6 +90,8 @@ class Collector:
             self.thread.join(timeout=5)
             if self.thread.is_alive():
                 raise RuntimeError("telemetry_shutdown_timeout")
+        if self.error_type:
+            raise RuntimeError("telemetry_writer_failed:" + self.error_type)
 
 
 def summarize(path, enabled):

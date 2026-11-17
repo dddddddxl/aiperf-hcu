@@ -160,6 +160,17 @@ def test_zero_error_inference_and_length(tmp_path):
     data["is_complete"] = False
     write_json(p, data)
     assert read_upstream(tmp_path, 3)["status"] == "incomplete"
+
+
+def test_warmup_export_is_not_profiling(tmp_path):
+    p = tmp_path / "profile_export_aiperf.json"
+    data = {"aiperf_version": "0.13.0", "is_complete": True,
+            "request_count": {"unit": "requests", "avg": 3}}
+    (tmp_path / "warmup").mkdir()
+    write_json(tmp_path / "warmup/profile_export_aiperf.json", {**data, "request_count": {"unit": "requests", "avg": 2}})
+    assert read_upstream(tmp_path, 3)["status"] == "incomplete"
+    write_json(tmp_path / "profile_export_aiperf.json", data)
+    assert read_upstream(tmp_path, 3)["status"] == "complete"
     data["is_complete"] = True
     data["error_summary"] = [{"message": "some requests failed"}]
     write_json(p, data)
@@ -189,3 +200,42 @@ def test_comparison_mismatch(tmp_path):
         write_json(root / "manifest.json", {"comparison_identity": {"model": str(n)}, "artifacts": hashes(root)})
     result = compare(tmp_path / "1", tmp_path / "2")
     assert not result["comparable"] and result["differences"][0]["field"] == "model"
+
+
+def test_collector_writer_failure_is_reported(tmp_path, monkeypatch):
+    from aiperf_hcu.telemetry import Collector
+    collector = Collector({"enabled": True}, tmp_path / "telemetry.jsonl")
+    def broken():
+        raise OSError("synthetic disk error")
+    monkeypatch.setattr(collector, "_collect", broken)
+    collector.start()
+    with pytest.raises(RuntimeError, match="telemetry_writer_failed"):
+        collector.stop()
+
+
+@pytest.mark.parametrize("failure", ["stop", "start"])
+def test_telemetry_failure_preserves_artifacts(tmp_path, monkeypatch, failure):
+    import aiperf_hcu.runner as runner
+    c = config(tmp_path, "http://127.0.0.1:1")
+    monkeypatch.setattr(runner, "engine_identity", lambda: {"version": "synthetic"})
+    monkeypatch.setattr(runner, "execute", lambda *args: ("completed", 0))
+    def broken(self):
+        raise OSError("synthetic writer error")
+    monkeypatch.setattr(runner.Collector, failure, broken)
+    root = tmp_path / "preserved"
+    result = runner.run(c, root)
+    assert result["status"] == "incomplete"
+    assert result["runs"][0]["telemetry"]["status"] == "incomplete"
+    assert result["experiment_source"] == "synthetic"
+    assert "synthetic" in (root / "report.md").read_text(encoding="utf-8")
+    verify(root)
+
+
+def test_partial_repeat_is_not_comparable(tmp_path):
+    environment = {k: "synthetic" for k in ("model_revision", "engine_commit", "image", "dtk", "driver", "card_model", "quantization", "parallelism", "cache_policy")}
+    for n in (1, 2):
+        root = tmp_path / str(n)
+        root.mkdir()
+        write_json(root / "summary.json", {"status": "incomplete", "runs": [{"execution": "completed", "upstream": {"status": "complete", "metrics": {}}}]})
+        write_json(root / "manifest.json", {"comparison_identity": {"environment": environment}, "artifacts": hashes(root)})
+    assert not compare(tmp_path / "1", tmp_path / "2")["comparable"]

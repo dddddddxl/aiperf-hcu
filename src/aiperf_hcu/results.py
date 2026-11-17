@@ -21,7 +21,10 @@ METRICS = {
 
 
 def read_upstream(directory, expected_requests, expected_output=None):
-    files = list(Path(directory).rglob("profile_export_aiperf.json"))
+    # v0.13 additionally exports per-phase files (including warmup). Only the
+    # canonical root aggregate describes the requested profiling result.
+    canonical = Path(directory) / "profile_export_aiperf.json"
+    files = [canonical] if canonical.is_file() else []
     if len(files) != 1:
         return {"status": "incomplete", "reason": "missing_or_ambiguous_upstream_export", "metrics": {}}
     try:
@@ -51,6 +54,7 @@ def read_upstream(directory, expected_requests, expected_output=None):
 
 def markdown(summary):
     lines = ["# 海光推理性能评测报告", "", f"执行状态：{summary['status']}",
+             "", f"实验来源：{summary.get('experiment_source', 'unknown')}（synthetic 表示模拟服务，不是 HCU 性能实测）",
              "", "这是性能测量记录，不是模型精度或自动放行结论。硬件兼容性仅限实际记录的环境。",
              "", "| 轮次 | 执行 | 指标完整性 | 遥测 |", "|---|---|---|---|"]
     for r in summary["runs"]:
@@ -97,7 +101,7 @@ def compare(baseline, candidate):
     required = ("model_revision", "engine_commit", "image", "dtk", "driver", "card_model", "quantization", "parallelism", "cache_policy")
     missing_identity = {side: [key for key in required if m["comparison_identity"].get("environment", {}).get(key) in (None, "", "unknown")]
                         for side, m in (("baseline", a), ("candidate", b))}
-    valid = all(s["runs"] and all(r["execution"] == "completed" and r["upstream"]["status"] == "complete" for r in s["runs"]) for s in (sa, sb))
+    valid = all(s.get("status") == "completed" and s["runs"] and all(r["execution"] == "completed" and r["upstream"]["status"] == "complete" for r in s["runs"]) for s in (sa, sb))
     valid = valid and not any(missing_identity.values())
     stats = {}
     for key in METRICS:

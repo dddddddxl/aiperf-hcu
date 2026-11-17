@@ -23,8 +23,9 @@ jobs:
       - name: Fresh wheel installation
         run: |
           uv venv .clean --python 3.11
-          uv export --locked --no-dev --no-emit-project --format requirements-txt > artifacts/dependencies.txt
+          uv export --locked --no-emit-project --format requirements-txt > artifacts/dependencies.txt
           uv pip sync --python .clean/bin/python artifacts/dependencies.txt
           uv pip install --python .clean/bin/python --no-deps dist/*.whl
           .clean/bin/python -c "from aiperf_hcu.runner import engine_identity; print(engine_identity())"
           .clean/bin/aiperf-hcu --help
+          .clean/bin/python -m pytest -q --junitxml=artifacts/clean-install-tests.xml

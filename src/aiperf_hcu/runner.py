@@ -117,7 +117,8 @@ def execute(args, timeout, log, secret):
         source = Path(args[index])
         files = tokenizer_identity(source)
         revision = digest(files)[:40]
-        repo_name = "hcu-local/" + revision
+        # Cache is already run-scoped; avoid repeating the hash in long Windows paths.
+        repo_name = "hcu-local/tokenizer"
         cache = log.parent / "tokenizer-cache"
         repo = cache / ("models--" + repo_name.replace("/", "--"))
         snapshot = repo / "snapshots" / revision
@@ -136,8 +137,15 @@ def execute(args, timeout, log, secret):
             del args[index:index+2]
             # v0.13 expands environment references in YAML, not raw CLI values.
             config_file = log.parent / "upstream-auth.json"
+            def arg(name):
+                return args[args.index(name)+1]
             write_json(config_file, {"benchmark": {"model": args[args.index("--model")+1],
-                       "endpoint": {"api_key": "${AIPERF_HCU_REQUEST_KEY}"}}})
+                       "endpoint": {"api_key": "${AIPERF_HCU_REQUEST_KEY}"},
+                       "datasets": [{"name": "main", "type": "synthetic", "entries": int(arg("--request-count")),
+                                     "prompts": {"isl": {"mean": float(arg("--synthetic-input-tokens-mean")), "stddev": float(arg("--synthetic-input-tokens-stddev"))},
+                                                 "osl": {"mean": float(arg("--output-tokens-mean")), "stddev": 0}}}],
+                       "phases": [{"name": "profiling", "kind": "profiling", "type": "concurrency",
+                                   "requests": int(arg("--request-count")), "concurrency": int(arg("--concurrency"))}]}})
             args += ["--config", str(config_file.resolve())]
         write_json(log.parent / (log.stem + ".actual-command.json"), args)
     with log.open("w", encoding="utf-8") as f:
@@ -199,9 +207,18 @@ def run(c, root):
         except Exception as e:
             error_type = type(e).__name__
         finally:
-            collector.stop()
+            try:
+                collector.stop()
+            except Exception as e:
+                state, error_type = "failed", "telemetry_stop_" + type(e).__name__
         upstream = read_upstream(folder / "raw", c["workload"]["requests"], c["workload"]["output_tokens"] if c["workload"]["force_output_length"] else None)
-        telemetry = summarize(folder / "telemetry.jsonl", c["telemetry"]["enabled"])
+        try:
+            telemetry = summarize(folder / "telemetry.jsonl", c["telemetry"]["enabled"])
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            telemetry = {"status": "incomplete", "observed": 0, "problems": 1,
+                         "freshness_unknown": 0, "statistics": [], "error_type": type(e).__name__}
+        if error_type and error_type.startswith("telemetry_stop_"):
+            telemetry.update(status="incomplete", error_type=error_type)
         if secret and any(secret.encode() in p.read_bytes() for p in folder.rglob("*") if p.is_file()):
             state, error_type = "failed", "credential_detected_in_private_artifacts"
         row = {"repeat": repeat, "execution": state, "returncode": code, "error_type": error_type,
@@ -213,6 +230,7 @@ def run(c, root):
             break
     execution_complete = len(runs) == c["workload"]["repeats"] and all(r["execution"] == "completed" and r["upstream"]["status"] == "complete" for r in runs)
     summary = {"schema_version": 1, "status": "completed" if execution_complete else "incomplete", "runs": runs,
+               "experiment_source": c["environment"]["source"],
                "telemetry_complete": all(r["telemetry"]["status"] == "complete" for r in runs),
                "hardware_validation": "not_certified", "total_seconds": time.time()-started}
     write_json(root / "summary.json", summary)

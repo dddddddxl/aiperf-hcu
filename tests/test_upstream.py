@@ -49,6 +49,25 @@ def test_real_engine_auth_and_failure(tmp_path, monkeypatch):
 
 
 @pytest.mark.upstream
+def test_authenticated_rate_and_warmup(tmp_path, monkeypatch):
+    secret = "synthetic-success-key"
+    monkeypatch.setenv("LOCAL_TEST_KEY", secret)
+    with server(key=secret) as (url, state):
+        c = config(tmp_path, url)
+        c["service"]["api_key_env"] = "LOCAL_TEST_KEY"
+        c["workload"].update(warmup=2, request_rate=10, arrival_pattern="poisson")
+        root = tmp_path / "authenticated"
+        result = run(c, root)
+        assert result["status"] == "completed", (result, (root / "run-001/process.log").read_text(encoding="utf-8")[-6000:])
+        assert len(state["requests"]) == 5
+        raw = json.loads((root / "run-001/raw/profile_export_aiperf.json").read_text(encoding="utf-8"))
+        phases = raw["input_config"]["phases"]
+        assert [(p["kind"], p["requests"], p["type"], p["rate"]) for p in phases] == [("warmup", 2, "poisson", 10), ("profiling", 3, "poisson", 10)]
+        assert result["runs"][0]["upstream"]["metrics"]["request_count"]["avg"] == 3
+        assert all(secret.encode() not in p.read_bytes() for p in root.rglob("*") if p.is_file())
+
+
+@pytest.mark.upstream
 def test_real_stream_disconnect_is_not_complete(tmp_path):
     with server(mode="disconnect") as (url, state):
         c = config(tmp_path, url)
