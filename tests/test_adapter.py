@@ -251,3 +251,18 @@ def test_partial_repeat_is_not_comparable(tmp_path):
         write_json(root / "summary.json", {"status": "incomplete", "runs": [{"execution": "completed", "upstream": {"status": "complete", "metrics": {}}}]})
         write_json(root / "manifest.json", {"comparison_identity": {"environment": environment}, "artifacts": hashes(root)})
     assert not compare(tmp_path / "1", tmp_path / "2")["comparable"]
+
+
+@pytest.mark.parametrize("timeout", [600, 900])
+def test_matrix_preserves_explicit_timeout(tmp_path, timeout):
+    c = config(tmp_path, "http://localhost:1")
+    c["workload"]["timeout_s"] = timeout
+    source = tmp_path / "matrix-input.yaml"
+    source.write_text(yaml.safe_dump(c), encoding="utf-8")
+    destination = tmp_path / "matrix"
+    script = Path(__file__).resolve().parents[1] / "scripts/validation_matrix.py"
+    subprocess.run([sys.executable, str(script), "--config", str(source), "--output", str(destination)], check=True, capture_output=True)
+    files = list(destination.glob("*.yaml"))
+    assert len(files) == 9
+    for file in files:
+        assert load(file)["workload"]["timeout_s"] == timeout

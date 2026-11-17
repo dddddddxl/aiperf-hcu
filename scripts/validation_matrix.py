@@ -19,7 +19,7 @@ cases += [("fixed-c8-no-telemetry", {"concurrency": 8}), ("fixed-c8-more-client-
 for name, updates in cases:
     c = deepcopy(base)
     c["workload"] = {"requests": 128, "warmup": 16, "repeats": 3, "input_tokens": 128, "input_stddev": 0,
-                     "output_tokens": 128, "concurrency": 1, "seed": 42, "timeout_s": 600, "force_output_length": True,
+                     "output_tokens": 128, "concurrency": 1, "seed": 42, "timeout_s": base["workload"]["timeout_s"], "force_output_length": True,
                      "arrival_pattern": "constant", **updates}
     if name.endswith("no-telemetry"):
         c["telemetry"]["enabled"] = False
