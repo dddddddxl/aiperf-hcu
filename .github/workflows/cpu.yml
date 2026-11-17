@@ -29,3 +29,16 @@ jobs:
           .clean/bin/python -c "from aiperf_hcu.runner import engine_identity; print(engine_identity())"
           .clean/bin/aiperf-hcu --help
           .clean/bin/python -m pytest -q --junitxml=artifacts/clean-install-tests.xml
+      - name: Store installable package and test summaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: aiperf-hcu-cpu-validated
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            uv.lock
+            artifacts/dependencies.txt
+            artifacts/tests.xml
+            artifacts/clean-install-tests.xml

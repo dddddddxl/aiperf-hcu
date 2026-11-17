@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "kind": "sanitized_excerpt_not_raw_export",
+  "source": "synthetic",
+  "source_test": "test_real_engine[True]",
+  "source_local_artifact": "artifacts/f10/test_real_engine_True_0/adapted/summary.json",
+  "code_commit": "93ba2e4722cf299d3b0def310f73c6bc6e96785e",
+  "hardware_validation": "not_certified",
+  "status": "completed",
+  "requests": 3,
+  "input_tokens_mean": 8,
+  "output_tokens_mean": 8,
+  "metrics": {
+    "time_to_first_token": {"unit": "ms", "avg": 5.207866666666667, "p99": 6.990688},
+    "time_to_first_output_token": {"unit": "ms", "avg": 5.207866666666667, "p99": 6.990688},
+    "inter_token_latency": {"unit": "ms", "avg": 5.617333333333333},
+    "request_latency": {"unit": "ms", "avg": 44.529199999999996},
+    "output_token_throughput": {"unit": "tokens/sec", "avg": 120.0891061167386}
+  },
+  "telemetry": {"source": "local_mock_exporter", "power_w": 100, "temperature_c": 45, "memory_used_bytes": 1024, "utilization_percent": 50},
+  "limitation": "只有三个模拟请求；这些数值不代表模型性能、海光硬件性能或真实遥测。原始工件保留在私有本地 artifacts，不随代码上传。"
+}

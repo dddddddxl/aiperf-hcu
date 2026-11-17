@@ -7,6 +7,8 @@
 提供 `doctor`、`run`、`report`、`compare`，旁路采集 hcu-exporter 指标。
 不部署模型、不重启服务、不自动占卡，不修改现有 hcu-bench。
 
+首版软件与干净安装验收见 [验证结果](docs/VALIDATION-RESULTS.md)，机器可读示例见 [模拟摘要](docs/mock-example.json)。示例不代表硬件性能。
+
 ## 安装
 
 需要 Python 3.11、Git 和 uv 0.13.8。客户端环境与 SGLang/vLLM 服务环境分开；不需要客户端安装 HCU 驱动或模型权重。
